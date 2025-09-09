@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import msgspec
 
 import vllm.platforms
+from vllm import envs
 from vllm.config import ParallelConfig
 from vllm.executor.msgspec_utils import decode_hook, encode_hook
 from vllm.logger import init_logger
@@ -50,6 +51,15 @@ try:
             self.input_decoder = msgspec.msgpack.Decoder(ExecuteModelRequest,
                                                          dec_hook=decode_hook)
             self.output_encoder = msgspec.msgpack.Encoder(enc_hook=encode_hook)
+
+            if (envs.VLLM_TORCH_PROFILER_DIR
+                    and "VLLM_TORCH_PROFILER_VERBOSE" not in os.environ):
+                # Needed for callstacks: https://github.com/ray-project/ray/issues/56366
+                os.environ["VLLM_TORCH_PROFILER_VERBOSE"] = "1"
+                logger.info(
+                    "Forcing VLLM_TORCH_PROFILER_VERBOSE=1 to enable callstacks"
+                    " with Ray backend. Set VLLM_TORCH_PROFILER_VERBOSE=0 to "
+                    "disable.")
 
         def get_node_ip(self) -> str:
             return get_ip()

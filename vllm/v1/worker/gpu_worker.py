@@ -90,7 +90,11 @@ class Worker(WorkerBase):
                 with_stack=envs.VLLM_TORCH_PROFILER_WITH_STACK,
                 with_flops=envs.VLLM_TORCH_PROFILER_WITH_FLOPS,
                 on_trace_ready=torch.profiler.tensorboard_trace_handler(
-                    torch_profiler_trace_dir, use_gzip=True))
+                    torch_profiler_trace_dir, use_gzip=True),
+                experimental_config=torch._C._profiler._ExperimentalConfig(
+                    verbose=True)
+                if envs.VLLM_TORCH_PROFILER_VERBOSE else None,
+            )
         else:
             self.profiler = None
 

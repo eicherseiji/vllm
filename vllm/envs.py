@@ -87,6 +87,7 @@ if TYPE_CHECKING:
     VLLM_TORCH_PROFILER_WITH_PROFILE_MEMORY: bool = False
     VLLM_TORCH_PROFILER_WITH_STACK: bool = True
     VLLM_TORCH_PROFILER_WITH_FLOPS: bool = False
+    VLLM_TORCH_PROFILER_VERBOSE: bool = False
     VLLM_USE_TRITON_AWQ: bool = False
     VLLM_ALLOW_RUNTIME_LORA_UPDATING: bool = False
     VLLM_SKIP_P2P_CHECK: bool = False
@@ -703,6 +704,11 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # If set, vLLM will use Triton implementations of AWQ.
     "VLLM_USE_TRITON_AWQ":
     lambda: bool(int(os.getenv("VLLM_USE_TRITON_AWQ", "0"))),
+
+    # Set torch profiler _ExperimentalConfig verbose to True if set
+    # VLLM_TORCH_PROFILER_VERBOSE=1.
+    "VLLM_TORCH_PROFILER_VERBOSE":
+    lambda: bool(os.getenv("VLLM_TORCH_PROFILER_VERBOSE", "0") != "0"),
 
     # If set, allow loading or unloading lora adapters in runtime,
     "VLLM_ALLOW_RUNTIME_LORA_UPDATING":
