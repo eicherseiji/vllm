@@ -74,11 +74,12 @@ class Worker(WorkerBase):
                         torch_profiler_trace_dir)
             logger.debug(
                 "Profiler config: record_shapes=%s,"
-                "profile_memory=%s,with_stack=%s,with_flops=%s",
+                "profile_memory=%s,with_stack=%s,with_flops=%s,verbose=%s",
                 envs.VLLM_TORCH_PROFILER_RECORD_SHAPES,
                 envs.VLLM_TORCH_PROFILER_WITH_PROFILE_MEMORY,
                 envs.VLLM_TORCH_PROFILER_WITH_STACK,
                 envs.VLLM_TORCH_PROFILER_WITH_FLOPS,
+                envs.VLLM_TORCH_PROFILER_VERBOSE,
             )
             self.profiler = torch.profiler.profile(
                 activities=[
