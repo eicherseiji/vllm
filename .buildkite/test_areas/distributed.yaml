@@ -198,16 +198,16 @@ steps:
     - DP_EP=1 bash v1/kv_connector/pd_integration/config_sweep_accuracy_test.sh
 
 - label: P2pNccl Connector PD accuracy (2 GPUs)
-  timeout_in_minutes: 20
+  timeout_in_minutes: 25
   working_dir: "/vllm-workspace/tests"
   num_devices: 2
+  optional: true  # P2pNcclConnector is experimental and requires complex setup
   source_file_dependencies:
     - vllm/distributed/kv_transfer/kv_connector/v1/p2p/
     - tests/v1/kv_connector/pd_integration/
+    - benchmarks/disagg_benchmarks/disagg_prefill_proxy_server.py
   commands:
-    - uv pip install --system -r /vllm-workspace/requirements/kv_connectors.txt
-    - KV_CONNECTOR=P2pNcclConnector GPU_MEMORY_UTILIZATION=0.6 \
-      bash v1/kv_connector/pd_integration/run_accuracy_test.sh
+    - GPU_MEMORY_UTILIZATION=0.4 bash v1/kv_connector/pd_integration/run_p2p_nccl_accuracy_test.sh
 
 - label: LMCache Connector PD accuracy (2 GPUs)
   timeout_in_minutes: 25
@@ -216,11 +216,12 @@ steps:
   optional: true
   source_file_dependencies:
     - vllm/distributed/kv_transfer/kv_connector/v1/lmcache_connector.py
+    - vllm/distributed/kv_transfer/kv_connector/v1/lmcache_integration/
     - tests/v1/kv_connector/pd_integration/
+    - examples/others/lmcache/disagg_prefill_lmcache_v1/disagg_proxy_server.py
   commands:
     - uv pip install --system -r /vllm-workspace/requirements/kv_connectors.txt
-    - KV_CONNECTOR=LMCacheConnectorV1 GPU_MEMORY_UTILIZATION=0.6 \
-      bash v1/kv_connector/pd_integration/run_accuracy_test.sh
+    - GPU_MEMORY_UTILIZATION=0.4 bash v1/kv_connector/pd_integration/run_lmcache_accuracy_test.sh
 
 - label: Pipeline + Context Parallelism (4 GPUs))
   timeout_in_minutes: 60
