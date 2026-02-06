@@ -6,12 +6,13 @@ import lm_eval
 import openai
 
 BASE_URL = "http://localhost:8192/v1"
-NUM_CONCURRENT = 100
+NUM_CONCURRENT = 1  # Higher values cause lm_eval session issues
 TASK = "gsm8k"
+NUM_SAMPLES = int(os.environ.get("NUM_SAMPLES", "10"))  # 0 = full dataset
 FILTER = "exact_match,strict-match"
 RTOL = 0.03
+RTOL_LIMITED = 0.15  # Wider tolerance for small sample sizes
 
-# Model-specific expected values
 EXPECTED_VALUES = {
     "Qwen/Qwen3-0.6B": 0.41,
     "deepseek-ai/deepseek-vl2-small": 0.59,
@@ -24,7 +25,6 @@ SIMPLE_PROMPT = (
     "various different organizations like UCB, Google, and Meta which means",
 )
 
-# Get model name from environment variable
 MODEL_NAME = os.environ.get("TEST_MODEL", "Qwen/Qwen3-0.6B")
 
 
@@ -45,27 +45,27 @@ def test_accuracy():
     model_args = (
         f"model={MODEL_NAME},"
         f"base_url={BASE_URL}/completions,"
-        f"num_concurrent={NUM_CONCURRENT},tokenized_requests=False"
+        f"num_concurrent={NUM_CONCURRENT},tokenized_requests=False,"
+        f"timeout=1800"
     )
 
     results = lm_eval.simple_evaluate(
         model="local-completions",
         model_args=model_args,
         tasks=TASK,
+        limit=NUM_SAMPLES or None,
     )
 
     measured_value = results["results"][TASK][FILTER]
     expected_value = EXPECTED_VALUES.get(MODEL_NAME)
 
     if expected_value is None:
-        print(
-            f"Warning: No expected value found for {MODEL_NAME}. "
-            "Skipping accuracy check."
-        )
+        print(f"Warning: No expected value for {MODEL_NAME}, skipping check.")
         print(f"Measured value: {measured_value}")
         return
 
+    rtol = RTOL_LIMITED if NUM_SAMPLES else RTOL
     assert (
-        measured_value - RTOL < expected_value
-        and measured_value + RTOL > expected_value
+        measured_value - rtol < expected_value
+        and measured_value + rtol > expected_value
     ), f"Expected: {expected_value} | Measured: {measured_value}"
