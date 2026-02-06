@@ -7,6 +7,9 @@
 
 set -xe
 
+# Required for consistent hashing in P/D disaggregation
+export PYTHONHASHSEED=0
+
 MODEL_NAME=${MODEL_NAME:-"Qwen/Qwen3-0.6B"}
 GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.3}
 GIT_ROOT=$(git rev-parse --show-toplevel)
@@ -24,18 +27,19 @@ wait_for_server() {
 pkill -f "vllm serve" || true
 sleep 2
 
-# Create temp LMCache config files
+# Create temp LMCache config files using the current lmcache config format
 PREFILL_CONFIG=$(mktemp --suffix=.yaml)
 DECODE_CONFIG=$(mktemp --suffix=.yaml)
 
 cat > $PREFILL_CONFIG << 'EOF'
-local_cpu: True
-max_local_cpu_size: 1.0
+local_cpu: False
+max_local_cpu_size: 0
 max_local_disk_size: 0
 remote_serde: NULL
+
 enable_pd: True
 pd_role: "sender"
-pd_buffer_size: 1073741824
+pd_buffer_size: 1086324736
 pd_buffer_device: "cuda"
 pd_peer_host: "localhost"
 pd_peer_init_port: [55555]
@@ -43,18 +47,19 @@ pd_peer_alloc_port: [55556]
 pd_proxy_host: "localhost"
 pd_proxy_port: 8192
 transfer_channel: "nixl"
-nixl_buffer_size: 1073741824
+nixl_buffer_size: 1086324736
 nixl_buffer_device: "cuda"
 EOF
 
 cat > $DECODE_CONFIG << 'EOF'
-local_cpu: True
-max_local_cpu_size: 1.0
+local_cpu: False
+max_local_cpu_size: 0
 max_local_disk_size: 0
 remote_serde: NULL
+
 enable_pd: True
 pd_role: "receiver"
-pd_buffer_size: 1073741824
+pd_buffer_size: 1086324736
 pd_buffer_device: "cuda"
 pd_peer_host: "localhost"
 pd_peer_init_port: [55555]
@@ -62,7 +67,7 @@ pd_peer_alloc_port: [55556]
 pd_proxy_host: "localhost"
 pd_proxy_port: 8192
 transfer_channel: "nixl"
-nixl_buffer_size: 1073741824
+nixl_buffer_size: 1086324736
 nixl_buffer_device: "cuda"
 EOF
 
