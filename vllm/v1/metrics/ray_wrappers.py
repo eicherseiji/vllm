@@ -17,25 +17,22 @@ except ImportError:
 import regex as re
 
 
-def _get_replica_id() -> str | None:
-    """Get the current Ray Serve replica ID, or None if not in a Serve context."""
-    if ray_serve is None:
-        return None
-    try:
-        return ray_serve.get_replica_context().replica_id.unique_id
-    except ray_serve.exceptions.RayServeException:
-        return None
+def _get_serve_tags() -> dict[str, str]:
+    """Get Ray Serve context as metric tags.
 
-
-def _get_deployment_id() -> str | None:
-    """Get the current Ray Serve deployment name, or None if not in a Serve
-    context."""
-    if ray_serve is None:
-        return None
-    try:
-        return ray_serve.get_replica_context().deployment
-    except ray_serve.exceptions.RayServeException:
-        return None
+    Returns a dict with DeploymentId and ReplicaId. Values are populated
+    from the Serve replica context when available, otherwise empty strings.
+    """
+    if ray_serve is not None:
+        try:
+            ctx = ray_serve.get_replica_context()
+            return {
+                "DeploymentId": ctx.deployment,
+                "ReplicaId": ctx.replica_id.unique_id,
+            }
+        except ray_serve.exceptions.RayServeException:
+            pass
+    return {"DeploymentId": "", "ReplicaId": ""}
 
 
 class RayPrometheusMetric:
@@ -47,16 +44,13 @@ class RayPrometheusMetric:
     @staticmethod
     def _get_tag_keys(labelnames: list[str] | None) -> tuple[str, ...]:
         labels = list(labelnames) if labelnames else []
-        labels.append("DeploymentId")
-        labels.append("ReplicaId")
+        labels.extend(_get_serve_tags().keys())
         return tuple(labels)
 
-    # Number of tag keys automatically added (DeploymentId, ReplicaId)
-    _NUM_AUTO_TAGS = 2
-
     def labels(self, *labels, **labelskwargs):
+        serve_tags = _get_serve_tags()
         if labels:
-            expected = len(self.metric._tag_keys) - self._NUM_AUTO_TAGS
+            expected = len(self.metric._tag_keys) - len(serve_tags)
             if len(labels) != expected:
                 raise ValueError(
                     "Number of labels must match the number of tag keys. "
@@ -64,8 +58,7 @@ class RayPrometheusMetric:
                 )
             labelskwargs.update(zip(self.metric._tag_keys, labels))
 
-        labelskwargs["DeploymentId"] = _get_deployment_id() or ""
-        labelskwargs["ReplicaId"] = _get_replica_id() or ""
+        labelskwargs.update(serve_tags)
 
         if labelskwargs:
             for k, v in labelskwargs.items():
