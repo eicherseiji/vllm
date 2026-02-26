@@ -27,6 +27,17 @@ def _get_replica_id() -> str | None:
         return None
 
 
+def _get_deployment_id() -> str | None:
+    """Get the current Ray Serve deployment name, or None if not in a Serve
+    context."""
+    if ray_serve is None:
+        return None
+    try:
+        return ray_serve.get_replica_context().deployment
+    except ray_serve.exceptions.RayServeException:
+        return None
+
+
 class RayPrometheusMetric:
     def __init__(self):
         if ray_metrics is None:
@@ -36,13 +47,16 @@ class RayPrometheusMetric:
     @staticmethod
     def _get_tag_keys(labelnames: list[str] | None) -> tuple[str, ...]:
         labels = list(labelnames) if labelnames else []
+        labels.append("DeploymentId")
         labels.append("ReplicaId")
         return tuple(labels)
 
+    # Number of tag keys automatically added (DeploymentId, ReplicaId)
+    _NUM_AUTO_TAGS = 2
+
     def labels(self, *labels, **labelskwargs):
         if labels:
-            # -1 because ReplicaId was added automatically
-            expected = len(self.metric._tag_keys) - 1
+            expected = len(self.metric._tag_keys) - self._NUM_AUTO_TAGS
             if len(labels) != expected:
                 raise ValueError(
                     "Number of labels must match the number of tag keys. "
@@ -50,6 +64,7 @@ class RayPrometheusMetric:
                 )
             labelskwargs.update(zip(self.metric._tag_keys, labels))
 
+        labelskwargs["DeploymentId"] = _get_deployment_id() or ""
         labelskwargs["ReplicaId"] = _get_replica_id() or ""
 
         if labelskwargs:
