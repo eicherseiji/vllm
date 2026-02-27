@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+import functools
 import time
 
 from vllm.distributed.kv_transfer.kv_connector.v1.metrics import KVConnectorPrometheus
@@ -17,11 +18,13 @@ except ImportError:
 import regex as re
 
 
+@functools.lru_cache(maxsize=1)
 def _get_ray_serve_tags() -> dict[str, str]:
     """Get Ray Serve context as metric tags.
 
     Returns a dict with DeploymentId and ReplicaId. Values are populated
     from the Serve replica context when available, otherwise empty strings.
+    Cached because these values are immutable for the lifetime of a replica.
     """
     if ray_serve is not None:
         try:
