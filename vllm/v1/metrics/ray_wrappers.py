@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
-import functools
 import time
 
 from vllm.distributed.kv_transfer.kv_connector.v1.metrics import KVConnectorPrometheus
@@ -18,26 +17,35 @@ except ImportError:
 import regex as re
 
 
-@functools.lru_cache(maxsize=1)
+_DEFAULT_SERVE_TAGS = {"DeploymentId": "", "ReplicaId": ""}
+_cached_serve_tags: dict[str, str] | None = None
+
+
 def _get_ray_serve_tags() -> dict[str, str]:
     """Get Ray Serve context as metric tags.
 
     Returns a dict with DeploymentId and ReplicaId. Values are populated
     from the Serve replica context when available, otherwise empty strings.
-    Cached because these values are immutable for the lifetime of a replica.
+    The result is cached once resolved because these values are immutable
+    for the lifetime of a replica.
     """
+    global _cached_serve_tags
+    if _cached_serve_tags is not None:
+        return _cached_serve_tags
+
     if ray_serve is not None:
         try:
             ctx = ray_serve.get_replica_context()
-            return {
+            _cached_serve_tags = {
                 "DeploymentId": ctx.deployment,
                 "ReplicaId": ctx.replica_id.unique_id,
             }
+            return _cached_serve_tags
         except ray_serve.exceptions.RayServeException:
             # Raised when running outside a Ray Serve deployment
             # (e.g. standalone Ray or unit tests).
             pass
-    return {"DeploymentId": "", "ReplicaId": ""}
+    return _DEFAULT_SERVE_TAGS
 
 
 class RayPrometheusMetric:
