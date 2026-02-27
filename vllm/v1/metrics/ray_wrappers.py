@@ -17,7 +17,7 @@ except ImportError:
 import regex as re
 
 
-def _get_serve_tags() -> dict[str, str]:
+def _get_ray_serve_tags() -> dict[str, str]:
     """Get Ray Serve context as metric tags.
 
     Returns a dict with DeploymentId and ReplicaId. Values are populated
@@ -46,11 +46,11 @@ class RayPrometheusMetric:
     @staticmethod
     def _get_tag_keys(labelnames: list[str] | None) -> tuple[str, ...]:
         labels = list(labelnames) if labelnames else []
-        labels.extend(_get_serve_tags().keys())
+        labels.extend(_get_ray_serve_tags().keys())
         return tuple(labels)
 
     def labels(self, *labels, **labelskwargs):
-        serve_tags = _get_serve_tags()
+        serve_tags = _get_ray_serve_tags()
         if labels:
             expected = len(self.metric._tag_keys) - len(serve_tags)
             if len(labels) != expected:
