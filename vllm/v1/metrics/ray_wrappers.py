@@ -31,6 +31,8 @@ def _get_serve_tags() -> dict[str, str]:
                 "ReplicaId": ctx.replica_id.unique_id,
             }
         except ray_serve.exceptions.RayServeException:
+            # Raised when running outside a Ray Serve deployment
+            # (e.g. standalone Ray or unit tests).
             pass
     return {"DeploymentId": "", "ReplicaId": ""}
 
