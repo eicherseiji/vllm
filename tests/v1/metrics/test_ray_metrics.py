@@ -116,15 +116,8 @@ def _install_mock_metric(wrapper: RayPrometheusMetric) -> MagicMock:
 
 
 def test_ray_counter_labels_returns_independent_children():
-    """Regression test: RayCounterWrapper.labels() must return distinct
-    labeled children that each carry their own tag set.
-
-    Prior to the fix, labels() mutated the wrapped Ray counter's default
-    tags in place and returned ``self``, so every FinishReason-partitioned
-    child pointed at the same counter and every vllm:request_success
-    increment was attributed to the last FinishReason iterated
-    (``repetition``).
-    """
+    """RayCounterWrapper.labels() must return distinct labeled children that
+    each carry their own tag set."""
     base = RayCounterWrapper(
         name="vllm_test_finish_reason",
         documentation="",
