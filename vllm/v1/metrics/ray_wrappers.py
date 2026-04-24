@@ -29,12 +29,13 @@ def _get_replica_id() -> str | None:
 
 
 class RayPrometheusMetric:
-    _tags: dict[str, str] | None = None
+    _is_labeled: bool = False
 
     def __init__(self):
         if ray_metrics is None:
             raise ImportError("RayPrometheusMetric requires Ray to be installed.")
         self.metric: Metric = None
+        self._tags: dict[str, str] = {"ReplicaId": _get_replica_id() or ""}
 
     @staticmethod
     def _get_tag_keys(labelnames: list[str] | None) -> tuple[str, ...]:
@@ -58,8 +59,11 @@ class RayPrometheusMetric:
         return {k: v if isinstance(v, str) else str(v) for k, v in labelskwargs.items()}
 
     def labels(self, *labels, **labelskwargs) -> "RayPrometheusMetric":
+        if self._is_labeled:
+            raise ValueError("labels() cannot be called on an already-labeled metric.")
         clone = copy.copy(self)
         clone._tags = self._build_tags(*labels, **labelskwargs)
+        clone._is_labeled = True
         return clone
 
     @staticmethod
@@ -94,6 +98,7 @@ class RayGaugeWrapper(RayPrometheusMetric):
         # implemented at the observability layer (Prometheus/Grafana).
         del multiprocess_mode
 
+        super().__init__()
         tag_keys = self._get_tag_keys(labelnames)
         name = self._get_sanitized_opentelemetry_name(name)
 
@@ -104,8 +109,6 @@ class RayGaugeWrapper(RayPrometheusMetric):
         )
 
     def set(self, value: int | float):
-        if self._tags is None:
-            return self.metric.set(value)
         return self.metric.set(value, tags=self._tags)
 
     def set_to_current_time(self):
@@ -123,6 +126,7 @@ class RayCounterWrapper(RayPrometheusMetric):
         documentation: str | None = "",
         labelnames: list[str] | None = None,
     ):
+        super().__init__()
         tag_keys = self._get_tag_keys(labelnames)
         name = self._get_sanitized_opentelemetry_name(name)
         self.metric = ray_metrics.Counter(
@@ -134,8 +138,6 @@ class RayCounterWrapper(RayPrometheusMetric):
     def inc(self, value: int | float = 1.0):
         if value == 0:
             return
-        if self._tags is None:
-            return self.metric.inc(value)
         return self.metric.inc(value, tags=self._tags)
 
 
@@ -150,6 +152,7 @@ class RayHistogramWrapper(RayPrometheusMetric):
         labelnames: list[str] | None = None,
         buckets: list[float] | None = None,
     ):
+        super().__init__()
         tag_keys = self._get_tag_keys(labelnames)
         name = self._get_sanitized_opentelemetry_name(name)
 
@@ -162,8 +165,6 @@ class RayHistogramWrapper(RayPrometheusMetric):
         )
 
     def observe(self, value: int | float):
-        if self._tags is None:
-            return self.metric.observe(value)
         return self.metric.observe(value, tags=self._tags)
 
 
