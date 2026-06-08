@@ -337,9 +337,17 @@ def build_actor_name(
     tp_size: int,
     pp_size: int,
     pcp_size: int,
+    data_parallel_rank: int | None = None,
+    data_parallel_size: int = 1,
 ) -> str:
     """Build a descriptive Ray actor name for dashboard visibility."""
     name = f"vllm_Worker_{instance_id}"
+    if data_parallel_size > 1:
+        if data_parallel_rank is None:
+            raise ValueError(
+                "data_parallel_rank is required when data_parallel_size > 1"
+            )
+        name += f"_DP{data_parallel_rank}"
     if tp_size > 1:
         name += f"_TP{rank % tp_size}"
     if pp_size > 1:

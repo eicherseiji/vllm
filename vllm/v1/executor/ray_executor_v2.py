@@ -334,7 +334,13 @@ class RayExecutorV2(MultiprocExecutor):
             )
 
             actor_name = build_actor_name(
-                instance_id, bundle["rank"], tp_size, pp_size, pcp_size
+                instance_id,
+                bundle["rank"],
+                tp_size,
+                pp_size,
+                pcp_size,
+                data_parallel_rank=self.parallel_config.data_parallel_rank,
+                data_parallel_size=self.parallel_config.data_parallel_size,
             )
 
             actor = (
